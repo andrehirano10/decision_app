@@ -1,0 +1,19 @@
+import sqlite3
+
+conn = sqlite3.connect('decisions.db')
+cursor = conn.cursor()
+
+cursor.execute('''
+CREATE TABLE decisions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    decision_text TEXT NOT NULL
+)
+''')
+
+conn.commit()
+conn.close()
+
+def (inverse_vowels):
+    vowels = "AEIOUaeiou"
+    for vowels in inverse_vowels:
+        return vowel[::-1]
