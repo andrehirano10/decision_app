@@ -1,13 +1,11 @@
 from flask import Flask, request, jsonify
-import sqlite3
+from flask_sqlalchemy import SQLAlchemy
 import os
-import matplotlib.pyplot as plt
-
 
 app = Flask(__name__)
-conn = sqlite3.connect('../decisions.db', check_same_thread=False)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///decisions.db'
+db = SQLAlchemy(app)
 
-@app.route('/')
 class Decision(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     decision1 = db.Column(db.String(80))
@@ -20,11 +18,10 @@ class Decision(db.Model):
 
 
 def weigh_decisions():
-    decision1 = input("Enter the first decision: ")
-    decision2 = input("Enter the second decision: ")
-
-    decision1_rating = 0
-    decision2_rating = 0
+    decision1 = request.json['decision1']
+    decision2 = request.json['decision2']
+    decision1_rating = request.json['decision1_rating']
+    decision2_rating = request.json['decision2_rating']
 
     self_efficacy = input("Which decision will make you feel more confident and capable? ({} or {}): enter 1 or 2)  ".format(decision1, decision2)).lower()
     if self_efficacy == "1":
@@ -53,31 +50,22 @@ def weigh_decisions():
     else:
         decision2_rating += 1
 
-    # Connect to database
-    conn = sqlite3.connect("../decisions.db")
-    c = conn.cursor()
-    # Create table if it doesn't already exist
-    c.execute('''CREATE TABLE IF NOT EXISTS decisions
-                 (decision text, rating integer)''')
+    decision = Decision(decision1=decision1, decision2=decision2, decision1_rating=decision1_rating, decision2_rating=decision2_rating)
 
-    # Insert the two decisions and their ratings into the database
-    c.execute("INSERT INTO decisions VALUES (?, ?)", (decision1, decision1_rating))
-    c.execute("INSERT INTO decisions VALUES (?, ?)", (decision2, decision2_rating))
-    conn.commit()
+    db.session.add(decision)
+    db.session.commit()
 
     if decision1_rating > decision2_rating:
         print("Go ahead with {}: ".format(decision1))
     else:
         print("Go ahead with {}: ".format(decision2))
 
-    # Plot the ratings of all the decisions stored in the database
-    c.execute("SELECT * from decisions")
-    rows = c.fetchall()
-    decision_names = [row[0] for row in rows]
-    decision_ratings = [row[1] for row in rows]
+    decisions = Decision.query.all()
+    decision_names = [d.decision1 + " vs " + d.decision2 for d in decisions]
+    decision_ratings = [d.decision1_rating + d.decision2_rating for d in decisions]
+
     plt.bar(decision_names, decision_ratings)
     plt.show()
 
-    conn.close()
 if __name__ == '__main__':
     app.run()
